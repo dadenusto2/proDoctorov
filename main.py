@@ -31,16 +31,25 @@ def new_file_to_task(user_to_file, new_text):
         # хранит текст из "страрого" 'username.txt'
         old_text = old_file.read()
         # создаем 'old_username_data_time.txt' и записываем в него старые данные
-        old_username_file = open(
-            f"old_{user_to_file['username']}_{datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S:%f')}.txt", "w")
-        for old_lines in old_text:
-            old_username_file.write(old_lines)
-        # записываем новые данные в 'username.txt'
-        write_to_file(user_to_file['username'], new_text, 1)
+        try:
+            old_username_file = open(
+                f"old_{user_to_file['username']}_{datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S:%f')}.txt", "w")
+            for old_lines in old_text:
+                old_username_file.write(old_lines)
+            # записываем новые данные в 'username.txt'
+            try:
+                write_to_file(user_to_file['username'], new_text, 1)
+            except:
+                print(f"Не удалось изменить файл '{user_to_file['username']}.txt!!!'")
+        except:
+            print(f"Не удалось создать файл 'old_{user_to_file['username']}_{datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S:%f')}.txt'!!!")
+    # если 'username.txt' еще не существует
     else:
-        # если 'username.txt' еще не существует
         # записываем новые данные в 'username.txt'
-        write_to_file(user_to_file['username'], new_text, 0)
+        try:
+            write_to_file(user_to_file['username'], new_text, 0)
+        except:
+            print(f"Не удалось создать новый файл '{user_to_file['username']}.txt!!!'")
 
 
 def text_to_user_file(user_to_file):
@@ -62,7 +71,7 @@ def text_to_user_file(user_to_file):
         laborum aut in quam
     """
     # переменная, хранящая текст для файла 'username.txt
-    new_text = (f"Отчет для компании {user_to_file['company_name']}.\n"     
+    new_text = (f"Отчет для компании {user_to_file['company_name']}.\n"
                 f"{user_to_file['name']} "
                 f"<{user_to_file['email']}> "
                 f"{datetime.strftime(datetime.now(), '%d.%m.%Y %H:%M:%S:%f')}\n"
@@ -84,7 +93,7 @@ def text_to_user_file(user_to_file):
         else:
             new_text += f"{user_to_file['false_users_todo'][1][i]}\n"
     new_text += f"\n"
-    return new_text     # возврат данных для файла 'username.txt'
+    return new_text  # возврат данных для файла 'username.txt'
 
 
 def count_of_completed(todos, user):
@@ -127,13 +136,12 @@ def create(todos_path, users_path):
     :param todos_path: путь к 'todos'
     :param users_path: путь к 'users'
     """
-    todos = read_from_api(todos_path)      # список задач из 'todos' (элементы списка типа 'dict')
-    users = read_from_api(users_path)      # список пользователей из 'users' (элементы списка типа 'dict')
-    users_to_file = []      # для вывода в 'username.txt'
+    todos = read_from_api(todos_path)  # список задач из 'todos' (элементы списка типа 'dict')
+    users = read_from_api(users_path)  # список пользователей из 'users' (элементы списка типа 'dict')
+    users_to_file = []  # для вывода в 'username.txt'
     # рассматриваем по одному user'у
     for user in users:
-        # если у пользователся есть данные
-        # (существует не только id)
+        # если у пользователся есть данные (существует не только id)
         if len(user) > 1:
             # получение списков завершенных и оставшихся задач и их названия у юзера
             complete_users_todo, false_users_todo = count_of_completed(todos, user)
@@ -151,7 +159,7 @@ def create(todos_path, users_path):
     if not os.path.isdir("tasks"):
         # если нет каталога "tasks", создаем его
         os.mkdir("tasks")
-        print("создана дерриктория 'tasks'")
+        print("Создана дериктория 'tasks'!")
     # переходим в каталог "tasks"
     os.chdir("tasks")
     for user_to_file in users_to_file:
@@ -163,12 +171,14 @@ def create(todos_path, users_path):
     os.chdir("..")
 
 
-
 def _main():
-    todos_path = "https://json.medrating.org/todos"       # путь к 'todos'
-    users_path = "https://json.medrating.org/users"       # путь к 'users'
-    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    create(todos_path, users_path)  # создаем или изменяем записи 'username.txt'
+    try:
+        todos_path = "https://json.medrating.org/todos"  # путь к 'todos'
+        users_path = "https://json.medrating.org/users"  # путь к 'users'
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        create(todos_path, users_path)  # создаем или изменяем записи 'username.txt'
+    except:
+        print("Не удалось подключиться к API!!!")
 
 
 if __name__ == '__main__':
