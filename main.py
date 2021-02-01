@@ -1,6 +1,8 @@
 import json
 import os
 from datetime import datetime
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
 def write_to_file(username, text, b):
@@ -22,21 +24,19 @@ def new_file_to_task(user_to_file, new_text):
     :param user_to_file: словарь, хранящий информацию о юзере
     :param new_text: данные для 'username.txt'
     """
+    # если 'username.txt' уже существует
     if os.path.isfile(f"{user_to_file['username']}.txt"):
-        # если 'username.txt' уже существует
+        # старый файл username.txt
         old_file = open(f"{user_to_file['username']}.txt", "r")
-        old_text = old_file.read()      # хранит текст из "страрого" 'username.txt'
-        # если новый текст не совпадает со старым,
-        # т.е. есть изменения в "todos.json" или "users.json"
-        # для конкретного user'a
-        if str(old_text) != new_text:
-            # создаем 'old_username_data_time.txt' и записываем в него старые данные
-            old_username_file = open(
-                f"old_{user_to_file['username']}_{datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S:%f')}.txt", "w")
-            for old_lines in old_text:
-                old_username_file.write(old_lines)
-            # записываем новые данные в 'username.txt'
-            write_to_file(user_to_file['username'], new_text, 1)
+        # хранит текст из "страрого" 'username.txt'
+        old_text = old_file.read()
+        # создаем 'old_username_data_time.txt' и записываем в него старые данные
+        old_username_file = open(
+            f"old_{user_to_file['username']}_{datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S:%f')}.txt", "w")
+        for old_lines in old_text:
+            old_username_file.write(old_lines)
+        # записываем новые данные в 'username.txt'
+        write_to_file(user_to_file['username'], new_text, 1)
     else:
         # если 'username.txt' еще не существует
         # записываем новые данные в 'username.txt'
@@ -111,22 +111,24 @@ def count_of_completed(todos, user):
     # возвращение списков завершенных и оставшихся задач и их названия у юзера
 
 
-def read_from_json(path):
-    """Чтение из файла типа 'json' и возвращение данных типа 'dict'
+def read_from_api(path):
+    """Чтение из API типа 'json' и возвращение данных типа 'dict'
     :param path: путь до файла типа 'json'
-    :return:
+    :return response_json: - json файл
     """
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    headers = {'Accept': 'application/json;odata=verbose'}
+    responce = requests.get(path, verify=False, headers=headers)
+    response_json = responce.json()
+    return response_json
 
 
 def create(todos_path, users_path):
     """ Создание файлов 'username.txt'
-    :param todos_path: путь к 'todos.json'
-    :param users_path: путь к 'users.json'
+    :param todos_path: путь к 'todos'
+    :param users_path: путь к 'users'
     """
-    todos = read_from_json(todos_path)      # список задач из 'todos.json' (элементы списка типа 'dict')
-    users = read_from_json(users_path)      # список пользователей из 'users.json' (элементы списка типа 'dict')
+    todos = read_from_api(todos_path)      # список задач из 'todos' (элементы списка типа 'dict')
+    users = read_from_api(users_path)      # список пользователей из 'users' (элементы списка типа 'dict')
     users_to_file = []      # для вывода в 'username.txt'
     # рассматриваем по одному user'у
     for user in users:
@@ -161,33 +163,12 @@ def create(todos_path, users_path):
     os.chdir("..")
 
 
-def watch_file_update(todos_path, users_path):
-    """Наблюдение за изменениями файлов "todos.json" и "users.json"
-    при помощи библиотеки "os", отслеживание времени изминения файла
-    :param todos_path: путь до файла типа 'todos.json'
-    :param users_path: путь до файла типа 'users.json'
-    """
-    todos_update_time = os.stat(todos_path).st_mtime  # время последнего обновления 'todos.json'
-    users_update_time = os.stat(users_path).st_mtime  # время последнего обновления 'users.json'
-    while 1:
-        # если были изменены файлы "todos.json" или "users.json",
-        # то обращаемся к функции create()
-        if todos_update_time != os.stat(todos_path).st_mtime:
-            todos_update_time = os.stat(todos_path).st_mtime
-            print('\nИзменен файл "todos.json"!')
-            create(todos_path, users_path)
-        elif users_update_time != os.stat(users_path).st_mtime:
-            users_update_time = os.stat(users_path).st_mtime
-            print('\nИзменен файл "users.json"!')
-            create(todos_path, users_path)
-
 
 def _main():
-    todos_path = "todos.json"       # путь к 'todos.json'
-    users_path = "users.json"       # путь к 'users.json'
+    todos_path = "https://json.medrating.org/todos"       # путь к 'todos'
+    users_path = "https://json.medrating.org/users"       # путь к 'users'
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
     create(todos_path, users_path)  # создаем или изменяем записи 'username.txt'
-    # обращемся к функции наблюдения за изминениями 'todos.json' и 'users.json'
-    watch_file_update(todos_path, users_path)
 
 
 if __name__ == '__main__':
